@@ -5,6 +5,7 @@
 #include <TFT_eSPI.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <UptimeCore.h>
 #include <time.h>
 #include <vector>
 
@@ -25,7 +26,7 @@ constexpr uint16_t COLOR_RED = 0xF800;
 constexpr uint16_t COLOR_AMBER = 0xFD20;
 constexpr uint16_t COLOR_MUTED = 0x7BEF;
 
-enum class SiteState { Unknown, Up, Down };
+using uptime_core::SiteState;
 
 struct Site {
   String name;
@@ -182,12 +183,12 @@ String refreshAgeText() {
 }
 
 void countStates(size_t &up, size_t &down) {
-  up = 0;
-  down = 0;
+  uptime_core::StateCounts counts;
   for (const Site &site : settings.sites) {
-    up += site.state == SiteState::Up;
-    down += site.state == SiteState::Down;
+    uptime_core::addState(counts, site.state);
   }
+  up = counts.up;
+  down = counts.down;
 }
 
 void drawDashboard() {
@@ -304,7 +305,7 @@ bool checkSite(Site &site) {
   }
 
   site.statusCode = statusCode;
-  site.state = statusCode >= 200 && statusCode < 400 ? SiteState::Up : SiteState::Down;
+  site.state = uptime_core::classifyHttpStatus(statusCode);
   return site.state == SiteState::Up;
 }
 
@@ -350,9 +351,7 @@ void setup() {
     drawFatalError();
     return;
   }
-  const uint8_t brightness = static_cast<uint8_t>(
-      (static_cast<uint16_t>(settings.displayBrightnessPercent) * 255U + 50U) / 100U);
-  amoled.setBrightness(brightness);
+  amoled.setBrightness(uptime_core::brightnessToByte(settings.displayBrightnessPercent));
 
   drawDashboard();
   connectWifi();
@@ -367,17 +366,18 @@ void loop() {
   }
 
   const uint32_t now = millis();
-  if (WiFi.status() != WL_CONNECTED && now - lastWifiAttemptMs >= WIFI_RETRY_MS) {
+  if (WiFi.status() != WL_CONNECTED &&
+      uptime_core::intervalElapsed(now, lastWifiAttemptMs, WIFI_RETRY_MS)) {
     connectWifi();
   }
 
   const uint32_t refreshIntervalMs = static_cast<uint32_t>(settings.refreshMinutes) * 60000UL;
   if (WiFi.status() == WL_CONNECTED &&
-      (!hasRefreshed || now - lastRefreshMs >= refreshIntervalMs)) {
+      (!hasRefreshed || uptime_core::intervalElapsed(now, lastRefreshMs, refreshIntervalMs))) {
     refreshSites();
   }
 
-  if (now - lastUiDrawMs >= UI_REFRESH_MS) {
+  if (uptime_core::intervalElapsed(now, lastUiDrawMs, UI_REFRESH_MS)) {
     lastUiDrawMs = now;
     drawDashboard();
   }
