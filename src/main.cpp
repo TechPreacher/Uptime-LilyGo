@@ -191,6 +191,19 @@ void countStates(size_t &up, size_t &down) {
   down = counts.down;
 }
 
+String truncateToWidth(const String &text, int maxWidth, uint8_t font) {
+  if (canvas.textWidth(text, font) <= maxWidth) {
+    return text;
+  }
+
+  const String ellipsis = "...";
+  String truncated = text;
+  while (truncated.length() > 0 && canvas.textWidth(truncated + ellipsis, font) > maxWidth) {
+    truncated.remove(truncated.length() - 1);
+  }
+  return truncated + ellipsis;
+}
+
 void drawDashboard() {
   drawBackground();
 
@@ -236,12 +249,15 @@ void drawDashboard() {
 
   canvas.setTextDatum(TL_DATUM);
   canvas.setTextColor(isScanning ? COLOR_MAGENTA : COLOR_CYAN, COLOR_BG);
-  const String footer = isScanning ? "SCANNING // " + scanLabel : refreshAgeText();
+  const String cycle = "CYCLE " + String(settings.refreshMinutes) + " MIN";
+  const int footerMaxWidth = canvas.width() - 36 - canvas.textWidth(cycle, 2);
+  const String footer = truncateToWidth(
+      isScanning ? "SCANNING // " + scanLabel : refreshAgeText(), footerMaxWidth, 2);
   canvas.drawString(footer, 12, 194, 2);
 
   canvas.setTextDatum(TR_DATUM);
   canvas.setTextColor(COLOR_MUTED, COLOR_BG);
-  canvas.drawString("CYCLE " + String(settings.refreshMinutes) + " MIN", canvas.width() - 12, 194, 2);
+  canvas.drawString(cycle, canvas.width() - 12, 194, 2);
 
   const uint32_t intervalMs = static_cast<uint32_t>(settings.refreshMinutes) * 60000UL;
   const int progress = hasRefreshed
@@ -268,7 +284,6 @@ void drawFatalError() {
 }
 
 void connectWifi() {
-  lastWifiAttemptMs = millis();
   WiFi.disconnect(false, false);
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
@@ -279,6 +294,7 @@ void connectWifi() {
     drawDashboard();
     delay(250);
   }
+  lastWifiAttemptMs = millis();
 }
 
 bool checkSite(Site &site) {
