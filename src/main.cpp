@@ -5,6 +5,7 @@
 #include <TFT_eSPI.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <UptimeCore.h>
 #include <time.h>
 #include <vector>
 
@@ -25,7 +26,7 @@ constexpr uint16_t COLOR_RED = 0xF800;
 constexpr uint16_t COLOR_AMBER = 0xFD20;
 constexpr uint16_t COLOR_MUTED = 0x7BEF;
 
-enum class SiteState { Unknown, Up, Down };
+using uptime_core::SiteState;
 
 struct Site {
   String name;
@@ -182,12 +183,25 @@ String refreshAgeText() {
 }
 
 void countStates(size_t &up, size_t &down) {
-  up = 0;
-  down = 0;
+  uptime_core::StateCounts counts;
   for (const Site &site : settings.sites) {
-    up += site.state == SiteState::Up;
-    down += site.state == SiteState::Down;
+    uptime_core::addState(counts, site.state);
   }
+  up = counts.up;
+  down = counts.down;
+}
+
+String truncateToWidth(const String &text, int maxWidth, uint8_t font) {
+  if (canvas.textWidth(text, font) <= maxWidth) {
+    return text;
+  }
+
+  const String ellipsis = "...";
+  String truncated = text;
+  while (truncated.length() > 0 && canvas.textWidth(truncated + ellipsis, font) > maxWidth) {
+    truncated.remove(truncated.length() - 1);
+  }
+  return truncated + ellipsis;
 }
 
 void drawDashboard() {
@@ -235,12 +249,15 @@ void drawDashboard() {
 
   canvas.setTextDatum(TL_DATUM);
   canvas.setTextColor(isScanning ? COLOR_MAGENTA : COLOR_CYAN, COLOR_BG);
-  const String footer = isScanning ? "SCANNING // " + scanLabel : refreshAgeText();
+  const String cycle = "CYCLE " + String(settings.refreshMinutes) + " MIN";
+  const int footerMaxWidth = canvas.width() - 36 - canvas.textWidth(cycle, 2);
+  const String footer = truncateToWidth(
+      isScanning ? "SCANNING // " + scanLabel : refreshAgeText(), footerMaxWidth, 2);
   canvas.drawString(footer, 12, 194, 2);
 
   canvas.setTextDatum(TR_DATUM);
   canvas.setTextColor(COLOR_MUTED, COLOR_BG);
-  canvas.drawString("CYCLE " + String(settings.refreshMinutes) + " MIN", canvas.width() - 12, 194, 2);
+  canvas.drawString(cycle, canvas.width() - 12, 194, 2);
 
   const uint32_t intervalMs = static_cast<uint32_t>(settings.refreshMinutes) * 60000UL;
   const int progress = hasRefreshed
@@ -267,7 +284,6 @@ void drawFatalError() {
 }
 
 void connectWifi() {
-  lastWifiAttemptMs = millis();
   WiFi.disconnect(false, false);
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
@@ -278,6 +294,7 @@ void connectWifi() {
     drawDashboard();
     delay(250);
   }
+  lastWifiAttemptMs = millis();
 }
 
 bool checkSite(Site &site) {
@@ -304,7 +321,7 @@ bool checkSite(Site &site) {
   }
 
   site.statusCode = statusCode;
-  site.state = statusCode >= 200 && statusCode < 400 ? SiteState::Up : SiteState::Down;
+  site.state = uptime_core::classifyHttpStatus(statusCode);
   return site.state == SiteState::Up;
 }
 
@@ -350,9 +367,7 @@ void setup() {
     drawFatalError();
     return;
   }
-  const uint8_t brightness = static_cast<uint8_t>(
-      (static_cast<uint16_t>(settings.displayBrightnessPercent) * 255U + 50U) / 100U);
-  amoled.setBrightness(brightness);
+  amoled.setBrightness(uptime_core::brightnessToByte(settings.displayBrightnessPercent));
 
   drawDashboard();
   connectWifi();
@@ -367,17 +382,18 @@ void loop() {
   }
 
   const uint32_t now = millis();
-  if (WiFi.status() != WL_CONNECTED && now - lastWifiAttemptMs >= WIFI_RETRY_MS) {
+  if (WiFi.status() != WL_CONNECTED &&
+      uptime_core::intervalElapsed(now, lastWifiAttemptMs, WIFI_RETRY_MS)) {
     connectWifi();
   }
 
   const uint32_t refreshIntervalMs = static_cast<uint32_t>(settings.refreshMinutes) * 60000UL;
   if (WiFi.status() == WL_CONNECTED &&
-      (!hasRefreshed || now - lastRefreshMs >= refreshIntervalMs)) {
+      (!hasRefreshed || uptime_core::intervalElapsed(now, lastRefreshMs, refreshIntervalMs))) {
     refreshSites();
   }
 
-  if (now - lastUiDrawMs >= UI_REFRESH_MS) {
+  if (uptime_core::intervalElapsed(now, lastUiDrawMs, UI_REFRESH_MS)) {
     lastUiDrawMs = now;
     drawDashboard();
   }

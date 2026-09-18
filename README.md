@@ -105,6 +105,17 @@ pio run --target uploadfs --upload-port /dev/cu.usbmodem1101
 After a firmware-only change, upload firmware. After changing
 `data/settings.ini`, upload LittleFS. Upload both for a fresh board.
 
+## Run tests
+
+Run host-side unit tests without connecting the board:
+
+```bash
+pio test -e native
+```
+
+Tests cover HTTP health classification, status counts and transitions,
+brightness conversion, refresh boundaries, and `millis()` rollover behavior.
+
 ## Monitor serial output
 
 Open the serial monitor at 115200 baud:
@@ -118,8 +129,10 @@ pio device monitor
 ```text
 boards/                  Custom PlatformIO board definition
 data/settings.ini.sample Public configuration template
+lib/UptimeCore/           Hardware-independent behavior
 media/                   Project images
 src/main.cpp             Firmware and dashboard implementation
+test/test_uptime_core/    Native Unity tests
 platformio.ini           Build, dependency, and upload configuration
 ```
 
