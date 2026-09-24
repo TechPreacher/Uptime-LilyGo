@@ -9,3 +9,4 @@ Local Service = http://192.168.1.10:8080/health
 [config]
 refresh_minutes = 5
 display_brightness_percent = 75
+orientation = right
