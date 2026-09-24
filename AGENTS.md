@@ -87,6 +87,7 @@ Example = https://example.com
 [config]
 refresh_minutes = 5
 display_brightness_percent = 75
+orientation = right
 ```
 
 Requirements and accepted ranges:
@@ -95,6 +96,7 @@ Requirements and accepted ranges:
 * At least one `[sites]` entry must exist
 * `refresh_minutes` accepts 1 through 1440
 * `display_brightness_percent` accepts 0 through 100
+* `orientation` accepts `right`, `left`, `down`, or `up` and defaults to `right`
 
 A settings-only change requires a LittleFS upload. It does not require firmware
 recompilation.

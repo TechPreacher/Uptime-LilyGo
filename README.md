@@ -1,7 +1,7 @@
 ---
 title: Uptime LilyGo
 description: Wi-Fi uptime dashboard for the LilyGo T-Display-S3 AMOLED
-ms.date: 2026-09-18
+ms.date: 2026-09-24
 ms.topic: overview
 ---
 
@@ -15,7 +15,7 @@ network strength, systems up, systems down, UTC time, and time since last scan.
 
 ## Features
 
-* Landscape dashboard designed for the 1.91-inch 536 x 240 AMOLED display
+* Dashboard orientation for USB-right, USB-left, USB-down, or USB-up mounting
 * Multiple HTTP and HTTPS endpoint checks
 * HTTP status codes from 200 through 399 treated as healthy
 * Configurable refresh interval and display brightness
@@ -65,11 +65,15 @@ Local Service = http://192.168.1.10:8080/health
 [config]
 refresh_minutes = 5
 display_brightness_percent = 75
+orientation = right
 ```
 
 Each entry under `[sites]` uses `Display Name = URL` format. At least one site
 and a Wi-Fi SSID are required. `refresh_minutes` accepts 1 through 1440, and
-`display_brightness_percent` accepts 0 through 100.
+`display_brightness_percent` accepts 0 through 100. `orientation` accepts
+`right`, `left`, `down`, or `up`, based on the USB port position. It defaults to
+`right`. Portrait orientations preserve the dashboard composition and rotate
+the network, systems-up, and systems-down panels so their contents stay upright.
 
 `data/settings.ini` is excluded from Git so Wi-Fi credentials and private URLs
 are not committed.
@@ -114,7 +118,8 @@ pio test -e native
 ```
 
 Tests cover HTTP health classification, status counts and transitions,
-brightness conversion, refresh boundaries, and `millis()` rollover behavior.
+orientation mapping, brightness conversion, refresh boundaries, and `millis()`
+rollover behavior.
 
 ## Monitor serial output
 

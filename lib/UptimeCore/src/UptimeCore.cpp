@@ -1,9 +1,31 @@
 #include "UptimeCore.h"
 
+#include <cstring>
+
 namespace uptime_core {
 
 SiteState classifyHttpStatus(int statusCode) {
   return statusCode >= 200 && statusCode < 400 ? SiteState::Up : SiteState::Down;
+}
+
+Orientation parseOrientation(const char *value) {
+  if (value == nullptr) {
+    return Orientation::Right;
+  }
+  if (std::strcmp(value, "down") == 0) {
+    return Orientation::Down;
+  }
+  if (std::strcmp(value, "left") == 0) {
+    return Orientation::Left;
+  }
+  if (std::strcmp(value, "up") == 0) {
+    return Orientation::Up;
+  }
+  return Orientation::Right;
+}
+
+uint8_t displayRotation(Orientation orientation) {
+  return static_cast<uint8_t>(orientation);
 }
 
 void addState(StateCounts &counts, SiteState state) {

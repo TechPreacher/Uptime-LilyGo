@@ -28,6 +28,32 @@ void test_http_status_boundaries() {
                         static_cast<int>(uptime_core::classifyHttpStatus(400)));
 }
 
+void test_orientation_mapping() {
+  using uptime_core::Orientation;
+
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(Orientation::Right),
+                        static_cast<int>(uptime_core::parseOrientation("right")));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(Orientation::Down),
+                        static_cast<int>(uptime_core::parseOrientation("down")));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(Orientation::Left),
+                        static_cast<int>(uptime_core::parseOrientation("left")));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(Orientation::Up),
+                        static_cast<int>(uptime_core::parseOrientation("up")));
+  TEST_ASSERT_EQUAL_UINT8(0, uptime_core::displayRotation(Orientation::Right));
+  TEST_ASSERT_EQUAL_UINT8(1, uptime_core::displayRotation(Orientation::Down));
+  TEST_ASSERT_EQUAL_UINT8(2, uptime_core::displayRotation(Orientation::Left));
+  TEST_ASSERT_EQUAL_UINT8(3, uptime_core::displayRotation(Orientation::Up));
+}
+
+void test_invalid_orientation_defaults_to_right() {
+  using uptime_core::Orientation;
+
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(Orientation::Right),
+                        static_cast<int>(uptime_core::parseOrientation("diagonal")));
+  TEST_ASSERT_EQUAL_INT(static_cast<int>(Orientation::Right),
+                        static_cast<int>(uptime_core::parseOrientation(nullptr)));
+}
+
 void test_unknown_states_are_not_counted() {
   const SiteState states[] = {SiteState::Unknown, SiteState::Up, SiteState::Down,
                               SiteState::Unknown};
@@ -73,6 +99,8 @@ void test_interval_handles_millis_rollover() {
 int main(int, char **) {
   UNITY_BEGIN();
   RUN_TEST(test_http_status_boundaries);
+  RUN_TEST(test_orientation_mapping);
+  RUN_TEST(test_invalid_orientation_defaults_to_right);
   RUN_TEST(test_unknown_states_are_not_counted);
   RUN_TEST(test_up_to_down_transition_updates_counts);
   RUN_TEST(test_brightness_conversion);
