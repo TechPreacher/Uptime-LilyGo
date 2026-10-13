@@ -16,6 +16,7 @@ struct StateCounts {
 SiteState classifyHttpStatus(int statusCode);
 Orientation parseOrientation(const char *value);
 uint8_t displayRotation(Orientation orientation);
+Orientation nextClockwiseOrientation(Orientation orientation);
 void addState(StateCounts &counts, SiteState state);
 uint8_t brightnessToByte(uint8_t percent);
 bool intervalElapsed(uint32_t now, uint32_t previous, uint32_t interval);

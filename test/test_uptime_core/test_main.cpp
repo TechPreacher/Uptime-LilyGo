@@ -54,6 +54,23 @@ void test_invalid_orientation_defaults_to_right() {
                         static_cast<int>(uptime_core::parseOrientation(nullptr)));
 }
 
+            void test_clockwise_orientation_cycle() {
+              using uptime_core::Orientation;
+
+              TEST_ASSERT_EQUAL_INT(
+                static_cast<int>(Orientation::Down),
+                static_cast<int>(uptime_core::nextClockwiseOrientation(Orientation::Right)));
+              TEST_ASSERT_EQUAL_INT(
+                static_cast<int>(Orientation::Left),
+                static_cast<int>(uptime_core::nextClockwiseOrientation(Orientation::Down)));
+              TEST_ASSERT_EQUAL_INT(
+                static_cast<int>(Orientation::Up),
+                static_cast<int>(uptime_core::nextClockwiseOrientation(Orientation::Left)));
+              TEST_ASSERT_EQUAL_INT(
+                static_cast<int>(Orientation::Right),
+                static_cast<int>(uptime_core::nextClockwiseOrientation(Orientation::Up)));
+            }
+
 void test_unknown_states_are_not_counted() {
   const SiteState states[] = {SiteState::Unknown, SiteState::Up, SiteState::Down,
                               SiteState::Unknown};
@@ -101,6 +118,7 @@ int main(int, char **) {
   RUN_TEST(test_http_status_boundaries);
   RUN_TEST(test_orientation_mapping);
   RUN_TEST(test_invalid_orientation_defaults_to_right);
+  RUN_TEST(test_clockwise_orientation_cycle);
   RUN_TEST(test_unknown_states_are_not_counted);
   RUN_TEST(test_up_to_down_transition_updates_counts);
   RUN_TEST(test_brightness_conversion);
