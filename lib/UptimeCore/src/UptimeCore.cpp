@@ -28,6 +28,20 @@ uint8_t displayRotation(Orientation orientation) {
   return static_cast<uint8_t>(orientation);
 }
 
+Orientation nextClockwiseOrientation(Orientation orientation) {
+  switch (orientation) {
+    case Orientation::Right:
+      return Orientation::Down;
+    case Orientation::Down:
+      return Orientation::Left;
+    case Orientation::Left:
+      return Orientation::Up;
+    case Orientation::Up:
+      return Orientation::Right;
+  }
+  return Orientation::Right;
+}
+
 void addState(StateCounts &counts, SiteState state) {
   if (state == SiteState::Up) {
     ++counts.up;

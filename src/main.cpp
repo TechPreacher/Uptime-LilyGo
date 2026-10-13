@@ -15,6 +15,8 @@ constexpr uint32_t WIFI_TIMEOUT_MS = 20000;
 constexpr uint32_t WIFI_RETRY_MS = 15000;
 constexpr uint32_t HTTP_TIMEOUT_MS = 8000;
 constexpr uint32_t UI_REFRESH_MS = 1000;
+constexpr uint8_t ORIENTATION_BUTTON_PIN = 0;
+constexpr uint32_t ORIENTATION_BUTTON_DEBOUNCE_US = 200000;
 constexpr int16_t DASHBOARD_WIDTH = 536;
 constexpr int16_t DASHBOARD_HEIGHT = 240;
 
@@ -60,6 +62,19 @@ bool hasRefreshed = false;
 bool isScanning = false;
 String scanLabel;
 String fatalMessage;
+volatile uint8_t pendingOrientationRotations = 0;
+volatile uint32_t lastOrientationButtonPressUs = 0;
+
+void IRAM_ATTR queueOrientationRotation() {
+  const uint32_t now = micros();
+  if (now - lastOrientationButtonPressUs < ORIENTATION_BUTTON_DEBOUNCE_US) {
+    return;
+  }
+  lastOrientationButtonPressUs = now;
+  if (pendingOrientationRotations != UINT8_MAX) {
+    ++pendingOrientationRotations;
+  }
+}
 
 String valueAfterEquals(const String &line) {
   const int separator = line.indexOf('=');
@@ -422,6 +437,23 @@ void refreshSites() {
   drawDashboard();
 }
 
+void applyPendingOrientationRotations() {
+  noInterrupts();
+  const uint8_t rotations = pendingOrientationRotations;
+  pendingOrientationRotations = 0;
+  interrupts();
+
+  if (rotations == 0) {
+    return;
+  }
+  for (uint8_t rotation = 0; rotation < rotations; ++rotation) {
+    settings.orientation = uptime_core::nextClockwiseOrientation(settings.orientation);
+  }
+  amoled.setRotation(uptime_core::displayRotation(settings.orientation));
+  drawDashboard();
+  lastUiDrawMs = millis();
+}
+
 }  // namespace
 
 void setup() {
@@ -441,19 +473,20 @@ void setup() {
     }
   }
   canvas.setSwapBytes(true);
-  if (isPortraitOrientation()) {
-    if (!portraitCanvas.createSprite(amoled.width(), amoled.height())) {
-      while (true) {
-        delay(1000);
-      }
+  if (!portraitCanvas.createSprite(DASHBOARD_HEIGHT, DASHBOARD_WIDTH)) {
+    while (true) {
+      delay(1000);
     }
-    portraitCanvas.setSwapBytes(true);
   }
+  portraitCanvas.setSwapBytes(true);
 
   if (!settingsLoaded) {
     drawFatalError();
     return;
   }
+  pinMode(ORIENTATION_BUTTON_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(ORIENTATION_BUTTON_PIN),
+                  queueOrientationRotation, FALLING);
   amoled.setBrightness(uptime_core::brightnessToByte(settings.displayBrightnessPercent));
 
   drawDashboard();
@@ -467,6 +500,8 @@ void loop() {
     delay(1000);
     return;
   }
+
+  applyPendingOrientationRotations();
 
   const uint32_t now = millis();
   if (WiFi.status() != WL_CONNECTED &&

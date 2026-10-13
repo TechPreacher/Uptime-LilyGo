@@ -1,7 +1,7 @@
 ---
 title: Uptime LilyGo Agent Guide
 description: Project context and working guidance for AI coding sessions
-ms.date: 2026-09-18
+ms.date: 2026-10-13
 ms.topic: reference
 ---
 
@@ -61,6 +61,11 @@ Startup performs these operations:
 The main loop retries Wi-Fi every 15 seconds, refreshes endpoint status at the
 configured interval, and redraws the dashboard once per second. Endpoint checks
 are synchronous and use an eight-second timeout.
+
+The `orientation` setting defines startup rotation. GPIO0 is the only physical
+button on the 1.91-inch board. Each debounced press rotates the display 90
+degrees clockwise without changing `settings.ini`. Button presses are queued by
+an interrupt so synchronous endpoint checks do not lose them.
 
 HTTP status codes from 200 through 399 count as healthy. Other status codes and
 transport errors count as down. Redirects are followed. HTTPS currently uses
